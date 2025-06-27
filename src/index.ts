@@ -6,8 +6,10 @@ import { responseFormatter } from './middlewares/responseFormatter';
 import { errorHandler } from './middlewares/errorHandler';
 import { UploadRouter } from './routers/upload.router';
 import { corsOptions } from './constants';
-import jobQueue from './queues/main.queue';
-import { convertToMp3 } from '././workers/convert.worker'; // export convertToMp3 from worker or reimplement here
+import jobQueue from './queues/audio-converter.queue';
+import { convertToMp3 } from './workers/audio-converter.worker'; // export convertToMp3 from worker or reimplement here
+import imageQueue from './queues/image-converter.queue';
+import { processImageJob } from './workers/image-converter.worker';
 
 const envFile =
   process.env.NODE_ENV === 'production' ? '.env.prod' : '.env.local';
@@ -41,6 +43,16 @@ jobQueue.process(async (job) => {
   }
 });
 
+imageQueue.process(async (job) => {
+  const { originalFilePath, yearMonth, newFileName, extension } = job.data;
+  try {
+    await processImageJob(originalFilePath, yearMonth, newFileName, extension);
+    console.log(`[ImageQueue] Successfully processed image job`);
+  } catch (err) {
+    console.error(`[ImageQueue] Failed to process image job`, err);
+    throw err;
+  }
+});
 app.get('/', (req: Request, res: Response) => {
   res.status(200).json({
     success: true,

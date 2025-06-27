@@ -1,8 +1,8 @@
 import { CorsOptions } from 'cors';
 
 const AUDIO_EXTENSIONS = ['mp3', 'ogg', 'wav', 'flac'];
-const IMAGE_EXTENSIONS = ['jpeg', 'jpg', 'png', 'gif'];
-const VIDEO_EXTENSIONS = ['mp4', 'avi', 'mov'];
+const IMAGE_EXTENSIONS = ['jpeg', 'jpg', 'png', 'gif', 'webp'];
+const VIDEO_EXTENSIONS = ['mp4', 'avi', 'mov', 'webm'];
 const DOCUMENT_EXTENSIONS = ['pdf', 'docx', 'txt'];
 
 export const constants = {

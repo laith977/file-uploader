@@ -6,7 +6,8 @@ import ffmpeg from 'fluent-ffmpeg';
 import ffmpegPath from 'ffmpeg-static';
 import { FileType } from '../types';
 import { constants } from '../constants';
-import { enqueueAudioConversionJob } from '../queues/main.queue';
+import { enqueueAudioConversionJob } from '../queues/audio-converter.queue';
+import { enqueueImageProcessingJob } from '../queues/image-converter.queue';
 
 ffmpeg.setFfmpegPath(ffmpegPath as string);
 
@@ -40,9 +41,10 @@ export class UploadController {
 
       const originalName = req.file.originalname;
       const ext = path.extname(originalName).slice(1).toLowerCase(); // get extension without dot
+      console.log(originalName);
       const fileType = getFileType(ext);
       const secondLevelFolder = ext; // e.g. 'mp3', 'ogg', 'png'
-
+      console.log(fileType);
       // Create dynamic folder paths
       const typeFolderPath = path.join(this.UPLOAD_BASE_PATH, fileType);
       const extFolderPath = path.join(typeFolderPath, secondLevelFolder);
@@ -77,6 +79,13 @@ export class UploadController {
           originalFilePath: newFilePath,
           yearMonth,
           newFileName,
+        });
+      } else if (fileType === 'image') {
+        await enqueueImageProcessingJob({
+          originalFilePath: newFilePath,
+          yearMonth,
+          newFileName,
+          extension: ext,
         });
       }
       // Respond with success and file info
