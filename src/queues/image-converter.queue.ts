@@ -1,5 +1,5 @@
 import Queue from 'bull';
-import { redisOptions } from '../redis';
+import { redisOptions } from '../constants';
 
 const imageQueue = new Queue('imageProcessingQueue', {
   redis: redisOptions,
