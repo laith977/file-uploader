@@ -6,6 +6,7 @@ import ffmpeg from 'fluent-ffmpeg';
 import ffmpegPath from 'ffmpeg-static';
 import { FileType } from '../types';
 import { constants } from '../constants';
+import { enqueueAudioConversionJob } from '../queues/main.queue';
 
 ffmpeg.setFfmpegPath(ffmpegPath as string);
 
@@ -71,39 +72,11 @@ export class UploadController {
       // If audio but not mp3, create .conv.mp3 copy
 
       if (fileType === 'audio' && ext !== 'mp3') {
-        const mp3FolderPath = path.join(
-          this.UPLOAD_BASE_PATH,
-          'audio',
-          'mp3',
-          yearMonth
-        );
-
-        if (!existsSync(mp3FolderPath)) {
-          await fs.mkdir(mp3FolderPath, { recursive: true });
-        }
-
-        const baseFileName = path.parse(newFileName).name;
-        const mp3CopyPath = path.join(
-          mp3FolderPath,
-          baseFileName + '.conv.mp3'
-        );
-
-        await new Promise<void>((resolve, reject) => {
-          ffmpeg(newFilePath)
-            .audioCodec('libmp3lame') // optional, but explicit
-            .toFormat('mp3')
-            .on('start', (commandLine) => {
-              console.log('Spawned FFmpeg with command: ' + commandLine);
-            })
-            .on('error', (err) => {
-              console.error('FFmpeg error:', err);
-              reject(err);
-            })
-            .on('end', () => {
-              console.log('Audio converted to MP3:', mp3CopyPath);
-              resolve();
-            })
-            .save(mp3CopyPath);
+        // enqueue conversion job to run 1 minute later
+        await enqueueAudioConversionJob({
+          originalFilePath: newFilePath,
+          yearMonth,
+          newFileName,
         });
       }
       // Respond with success and file info
