@@ -6,13 +6,18 @@ import { responseFormatter } from './middlewares/responseFormatter';
 import { errorHandler } from './middlewares/errorHandler';
 import { UploadRouter } from './routers/upload.router';
 import { corsOptions } from './constants';
+import redis from './redis';
+const envFile =
+  process.env.NODE_ENV === 'production' ? '.env.prod' : '.env.local';
+dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 dotenv.config();
-
 const app = express();
 const PORT = process.env.PORT;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
+redis.on('connect', () => {
+  console.log('Connected to Redis');
+});
 app.use(cors(corsOptions));
 app.use(responseFormatter);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

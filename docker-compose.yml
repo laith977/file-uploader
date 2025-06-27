@@ -1,0 +1,20 @@
+
+services:
+  app:
+    build: .
+    container_name: express-app
+    environment:
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+      - PORT=3000
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+    ports:
+      - "3000:3000"
+
+  redis:
+    image: redis:7.2
+    container_name: redis
+    ports:
+      - "6379:6379"
