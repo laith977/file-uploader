@@ -40,11 +40,6 @@ export async function convertToMp3(
       .on('start', (commandLine) => {
         console.log(`[FFmpeg] Started with command: ${commandLine}`);
       })
-      .on('progress', (progress) => {
-        console.log(
-          `[FFmpeg] Processing: ${progress.percent?.toFixed(2)}% done`
-        );
-      })
       .on('error', (err) => {
         console.error(`[FFmpeg] Error during conversion:`, err);
         reject(err);

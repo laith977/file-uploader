@@ -6,7 +6,6 @@ import { responseFormatter } from './middlewares/responseFormatter';
 import { errorHandler } from './middlewares/errorHandler';
 import { UploadRouter } from './routers/upload.router';
 import { corsOptions } from './constants';
-import redis from './redis';
 import jobQueue from './queues/main.queue';
 import { convertToMp3 } from '././workers/convert.worker'; // export convertToMp3 from worker or reimplement here
 
@@ -14,20 +13,20 @@ const envFile =
   process.env.NODE_ENV === 'production' ? '.env.prod' : '.env.local';
 dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 dotenv.config();
-const app = express();
+
 const PORT = process.env.PORT;
+const app = express();
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-redis.on('connect', () => {
-  console.log('Connected to Redis');
-});
 app.use(cors(corsOptions));
 app.use(responseFormatter);
+app.use(errorHandler);
 
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 const uploadRouterInstance = new UploadRouter();
 app.use('/api', uploadRouterInstance.router);
-app.use(errorHandler);
 
 // Start processing jobs inside Express server process:
 jobQueue.process(async (job) => {
