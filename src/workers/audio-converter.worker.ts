@@ -18,6 +18,14 @@ export async function convertToMp3(
     `[convertToMp3] Starting conversion for file: ${originalFilePath}`
   );
 
+  // Check if input file exists
+  if (!existsSync(originalFilePath)) {
+    console.error(
+      `[convertToMp3] ERROR: Input file is missing: ${originalFilePath}`
+    );
+    return;
+  }
+
   const mp3FolderPath = path.join(UPLOAD_BASE_PATH, 'audio', 'mp3', yearMonth);
   console.log(`[convertToMp3] Target MP3 folder path: ${mp3FolderPath}`);
 

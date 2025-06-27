@@ -8,6 +8,7 @@ import { FileType } from '../types';
 import { constants } from '../constants';
 import { enqueueAudioConversionJob } from '../queues/audio-converter.queue';
 import { enqueueImageProcessingJob } from '../queues/image-converter.queue';
+import { v4 as uuidv4 } from 'uuid';
 
 ffmpeg.setFfmpegPath(ffmpegPath as string);
 
@@ -44,7 +45,6 @@ export class UploadController {
       console.log(originalName);
       const fileType = getFileType(ext);
       const secondLevelFolder = ext; // e.g. 'mp3', 'ogg', 'png'
-      console.log(fileType);
       // Create dynamic folder paths
       const typeFolderPath = path.join(this.UPLOAD_BASE_PATH, fileType);
       const extFolderPath = path.join(typeFolderPath, secondLevelFolder);
@@ -65,12 +65,9 @@ export class UploadController {
       const tempFilePath = req.file.path;
 
       // Build new file path inside year-month folder
-      const newFileName = req.file.filename; // use multer-generated name or create your own
+      const newFileName = `${uuidv4()}.${ext}`;
       const newFilePath = path.join(dateFolderPath, newFileName);
-
-      // Move file to final folder
       await fs.rename(tempFilePath, newFilePath);
-
       // If audio but not mp3, create .conv.mp3 copy
 
       if (fileType === 'audio' && ext !== 'mp3') {
@@ -98,6 +95,81 @@ export class UploadController {
           extension: ext,
           path: newFilePath,
         },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+  /**
+   * Handles multiple file uploads (expects req.files from multer)
+   */
+  public async handleMultipleUpload(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        return res.status(400).json({ message: 'No files uploaded' });
+      }
+
+      const now = new Date();
+      const yearMonth = `${now.getFullYear()}-${(now.getMonth() + 1)
+        .toString()
+        .padStart(2, '0')}`;
+
+      const responses = [];
+
+      for (const file of files) {
+        const originalName = file.originalname;
+        const ext = path.extname(originalName).slice(1).toLowerCase();
+        const fileType = getFileType(ext);
+        const secondLevelFolder = ext;
+
+        // Build target folders
+        const typeFolderPath = path.join(this.UPLOAD_BASE_PATH, fileType);
+        const extFolderPath = path.join(typeFolderPath, secondLevelFolder);
+        const dateFolderPath = path.join(extFolderPath, yearMonth);
+
+        // Ensure target folder exists
+        await fs.mkdir(dateFolderPath, { recursive: true });
+
+        // Move the uploaded file from temp to final location
+        const tempFilePath = file.path;
+        const newFileName = file.filename;
+        const newFilePath = path.join(dateFolderPath, newFileName);
+        await fs.rename(tempFilePath, newFilePath);
+
+        // Enqueue jobs if needed
+        if (fileType === 'audio' && ext !== 'mp3') {
+          await enqueueAudioConversionJob({
+            originalFilePath: newFilePath,
+            yearMonth,
+            newFileName,
+          });
+        } else if (fileType === 'image') {
+          await enqueueImageProcessingJob({
+            originalFilePath: newFilePath,
+            yearMonth,
+            newFileName,
+            extension: ext,
+          });
+        }
+
+        // Collect response info
+        responses.push({
+          originalName,
+          storedName: newFileName,
+          type: fileType,
+          extension: ext,
+          path: newFilePath,
+        });
+      }
+
+      res.status(200).json({
+        message: 'Files uploaded successfully',
+        files: responses,
       });
     } catch (error) {
       next(error);

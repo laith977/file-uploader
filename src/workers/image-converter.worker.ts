@@ -13,6 +13,13 @@ export async function processImageJob(
 ) {
   console.log(`[ImageWorker] Processing image: ${originalFilePath}`);
 
+  if (!existsSync(originalFilePath)) {
+    console.error(
+      `[ImageWorker] ERROR: Input file is missing: ${originalFilePath}`
+    );
+    return;
+  }
+
   const imageFolderBase = path.join(UPLOAD_BASE_PATH, 'image');
 
   // CDN copy folder
